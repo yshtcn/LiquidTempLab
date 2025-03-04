@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek 对话</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #1A1B1E;
+            color: #FFFFFF;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .header {
+            background-color: #1A1B1E;
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #2F3336;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            box-sizing: border-box;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+        }
+        .header h2 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #E6E6E6;
+        }
+        .header h2::before {
+            content: '';
+            display: inline-block;
+            width: 160px;
+            height: 40px;
+            background-image: url('logo.webp');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .chat-container {
+            max-width: 800px;
+            width: 100%;
+            margin: 56px auto 80px;
+            padding: 0 16px;
+            flex-grow: 1;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        .message {
+            margin: 8px 0;
+            padding: 0;
+            max-width: 100%;
+            word-wrap: break-word;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            line-height: 1.5;
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+        }
+        .message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 80%;
+            display: inline-block;
+        }
+        .user-message {
+            align-items: flex-end;
+        }
+        .user-message .message-content {
+            background-color: #4B7BF5;
+            color: white;
+        }
+        .ai-message {
+            align-items: flex-start;
+        }
+        .ai-message .message-content {
+            background-color: #2B2D31;
+            color: #E6E6E6;
+        }
+        .code-block {
+            background-color: #1A1B1E;
+            color: #E6E6E6;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            margin: 8px 0;
+            font-size: 13px;
+            line-height: 1.6;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #2F3336;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .code-block pre {
+            margin: 0;
+            padding: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #E6E6E6;
+        }
+        .input-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #1A1B1E;
+            padding: 16px;
+            border-top: 1px solid #2F3336;
+        }
+        .input-box {
+            display: flex;
+            gap: 12px;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #2F3336;
+            border-radius: 6px;
+            outline: none;
+            background-color: #2B2D31;
+            color: #E6E6E6;
+            font-size: 14px;
+        }
+        input[type="text"]:focus {
+            border-color: #4B7BF5;
+        }
+        textarea {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #2F3336;
+            border-radius: 6px;
+            outline: none;
+            background-color: #2B2D31;
+            color: #E6E6E6;
+            font-size: 14px;
+            resize: none;
+            min-height: 24px;
+            max-height: 200px;
+            line-height: 1.5;
+            font-family: inherit;
+        }
+        textarea:focus {
+            border-color: #4B7BF5;
+        }
+        button {
+            padding: 12px 24px;
+            background-color: #4B7BF5;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            background-color: #3B6BE5;
+        }
+        button:disabled {
+            background-color: #2B2D31;
+            cursor: not-allowed;
+            color: #888;
+        }
+        .preview-button {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 8px 16px;
+            background-color: #4B7BF5;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+        }
+        .preview-button:hover {
+            background-color: #3B6BE5;
+        }
+        .typing-indicator {
+            display: none;
+            padding: 8px 12px;
+            margin: 8px 0;
+            color: #888;
+            font-size: 14px;
+            background-color: #2B2D31;
+            border-radius: 12px;
+            max-width: 80%;
+        }
+        .typing-indicator.show {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+        .typing-dots::after {
+            content: '';
+            width: 4px;
+            height: 4px;
+            background-color: #888;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        @keyframes typing {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+        .message-content.typing {
+            display: inline-block;
+            white-space: pre-wrap;
+            overflow: hidden;
+            border-right: 2px solid #4B7BF5;
+            animation: cursor-blink 0.7s infinite;
+        }
+        @keyframes cursor-blink {
+            50% { border-color: transparent; }
+        }
+        .image-container {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 8px;
+            width: 400px;
+            max-width: 100%;
+        }
+        .image-container img {
+            width: 100%;
+            height: auto;
+            transition: transform 0.3s ease;
+            border-radius: 6px;
+            clip-path: inset(0 0 100% 0);
+            animation: reveal 12s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes reveal {
+            0% {
+                clip-path: inset(0 0 100% 0);
+            }
+            20% {
+                clip-path: inset(0 0 85% 0);
+            }
+            50% {
+                clip-path: inset(0 0 60% 0);
+            }
+            75% {
+                clip-path: inset(0 0 30% 0);
+            }
+            100% {
+                clip-path: inset(0 0 0 0);
+            }
+        }
+        .image-container:hover img {
+            transform: scale(1.02);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal-content {
+            max-width: 90%;
+            max-height: 90vh;
+            position: relative;
+        }
+        .modal-content img {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+        .close-button {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+        .close-button:hover {
+            opacity: 1;
+        }
+        .image-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: rgba(255,255,255,0.1);
+            overflow: hidden;
+        }
+        .image-progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #4B7BF5;
+            transition: width 0.3s ease;
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2F3336;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3D3D3D;
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                margin: 56px auto 80px;
+                padding: 0 12px;
+            }
+            .message {
+                margin: 20px 0;
+            }
+            .input-container {
+                padding: 12px;
+            }
+            .image-container img {
+                max-width: 100%;
+            }
+            input[type="text"] {
+                font-size: 16px; /* 移动端输入框字体大小优化 */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2></h2>
+    </div>
+    
+    <div class="chat-container" id="chatContainer">
+        <div class="typing-indicator" id="typingIndicator">
+            <span>思考中</span>
+            <div class="typing-dots"></div>
+        </div>
+    </div>
+    
+    <div class="input-container" id="inputContainer">
+        <div class="input-box">
+            <textarea id="userInput" placeholder="发送消息给 DeepSeek..."></textarea>
+            <button id="sendButton" onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <div class="modal" id="imageModal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal()">&times;</span>
+            <img id="modalImage" src="" alt="放大图片">
+        </div>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chatContainer');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const inputContainer = document.getElementById('inputContainer');
+        const modal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+
+        // 预设的AI回复内容
+        const aiResponses = {
+            '实验': `为了直观展示热水和冷牛奶的温度变化，我将使用折线图来呈现数据。以下是温度随时间变化的折线图：<div class="image-container"><img src="Show.png" alt="Show"></div>热水温度变化：从60℃开始，每分钟逐渐下降，最终在第7分钟降至44℃。\n冷牛奶温度变化：从10℃开始，每分钟逐渐上升，最终在第7分钟达到44℃。\n在第7分钟时，热水和冷牛奶的温度达到平衡，均为44℃。`,
+            '工具': `当然可以！我将为你编写一个使用HTML5和JavaScript制作的简单工具。我会在左边展示折线图，右边记录温度，请稍等：<div class="code-block"><pre id="codeContent"></pre></div><a href="LiquidTempLab.html" class="preview-button" target="_blank">点击查看效果</a>`
+        };
+
+        // 源代码内容变量声明
+        let liquidTempLabContent = '';
+
+        // 加载源代码的函数
+        async function loadSourceCode() {
+            try {
+                const response = await fetch('LiquidTempLab.html');
+                const text = await response.text();
+                liquidTempLabContent = text;
+            } catch (error) {
+                console.error('加载源代码失败:', error);
+                liquidTempLabContent = '加载源代码失败，请稍后重试。';
+            }
+        }
+
+        // 页面加载时获取源代码
+        window.addEventListener('load', loadSourceCode);
+
+        function typeText(element, text, callback) {
+            let index = 0;
+            element.innerHTML = '';
+            
+            function type() {
+                if (index < text.length) {
+                    // 处理换行符
+                    if (text[index] === '\n') {
+                        element.innerHTML += '<br>';
+                    } else {
+                        element.innerHTML += text[index];
+                    }
+                    index++;
+                    setTimeout(type, 50);
+                } else {
+                    element.classList.remove('typing');
+                    if (callback) callback();
+                }
+            }
+            
+            element.classList.add('typing');
+            type();
+        }
+
+        function typeCode(element, text, callback) {
+            let index = 0;
+            element.textContent = '';
+            const lines = text.split('\n');
+            let currentLine = 0;
+            const batchSize = 8; // 每次显示8行
+            const pauseTime = 300; // 暂停300毫秒
+            
+            function typeBatch() {
+                if (currentLine < lines.length) {
+                    // 显示一批代码行
+                    for (let i = 0; i < batchSize && currentLine < lines.length; i++) {
+                        const line = lines[currentLine];
+                        element.textContent += line + '\n';
+                        currentLine++;
+                    }
+                    
+                    // 滚动到底部
+                    const codeBlock = element.closest('.code-block');
+                    if (codeBlock) {
+                        codeBlock.scrollTop = codeBlock.scrollHeight;
+                    }
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    
+                    // 暂停一段时间后继续显示下一批
+                    setTimeout(typeBatch, pauseTime);
+                } else if (callback) {
+                    callback();
+                }
+            }
+            
+            typeBatch();
+        }
+
+        function showMessage(message, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            messageDiv.appendChild(contentDiv);
+            chatContainer.appendChild(messageDiv);
+            
+            setTimeout(() => messageDiv.classList.add('show'), 100);
+
+            if (!isUser && message.includes('image-container')) {
+                // 分离文字和图片部分
+                const parts = message.split('<div class="image-container">');
+                const introText = parts[0];
+                const imagePart = '<div class="image-container">' + parts[1].split('热水温度变化：')[0];
+                const analysisText = '热水温度变化：' + parts[1].split('热水温度变化：')[1];
+                
+                // 使用打字效果显示第一段文字说明
+                typeText(contentDiv, introText, () => {
+                    setTimeout(() => {
+                        const imageMessageDiv = document.createElement('div');
+                        imageMessageDiv.className = 'message ai-message';
+                        imageMessageDiv.innerHTML = imagePart;
+                        chatContainer.appendChild(imageMessageDiv);
+                        setTimeout(() => imageMessageDiv.classList.add('show'), 100);
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                        
+                        // 等待图片加载动画完成后显示分析文字
+                        setTimeout(() => {
+                            const analysisMessageDiv = document.createElement('div');
+                            analysisMessageDiv.className = 'message ai-message';
+                            const analysisContentDiv = document.createElement('div');
+                            analysisContentDiv.className = 'message-content';
+                            analysisMessageDiv.appendChild(analysisContentDiv);
+                            chatContainer.appendChild(analysisMessageDiv);
+                            setTimeout(() => analysisMessageDiv.classList.add('show'), 100);
+                            
+                            // 使用打字效果显示分析文字，并在完成后启用输入框
+                            typeText(analysisContentDiv, analysisText, () => {
+                                setTimeout(() => {
+                                    disableInput(false);
+                                }, 500);
+                            });
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }, 12000); // 等待12秒的图片加载动画
+                    }, 500);
+                });
+            } else if (!isUser && message.includes('code-block')) {
+                // 分离文字、代码块和预览按钮
+                const parts = message.split('<div class="code-block">');
+                const introText = parts[0];
+                const codePart = '<div class="code-block">' + parts[1].split('<a href="LiquidTempLab.html"')[0];
+                const previewButton = '<a href="LiquidTempLab.html" class="preview-button" target="_blank">点击查看效果</a>';
+                
+                typeText(contentDiv, introText, () => {
+                    setTimeout(() => {
+                        const codeMessageDiv = document.createElement('div');
+                        codeMessageDiv.className = 'message ai-message';
+                        codeMessageDiv.innerHTML = codePart;
+                        chatContainer.appendChild(codeMessageDiv);
+                        
+                        const codeContent = codeMessageDiv.querySelector('#codeContent');
+                        if (codeContent && liquidTempLabContent) {
+                            typeCode(codeContent, liquidTempLabContent, () => {
+                                setTimeout(() => {
+                                    codeContent.parentElement.scrollLeft = 0;
+                                    
+                                    // 代码显示完成后显示提示文字和预览按钮
+                                    const buttonMessageDiv = document.createElement('div');
+                                    buttonMessageDiv.className = 'message ai-message';
+                                    const buttonContentDiv = document.createElement('div');
+                                    buttonContentDiv.className = 'message-content';
+                                    buttonMessageDiv.appendChild(buttonContentDiv);
+                                    chatContainer.appendChild(buttonMessageDiv);
+                                    
+                                    // 使用打字效果显示提示文字
+                                    typeText(buttonContentDiv, '点击下方按钮试试吧！', () => {
+                                        setTimeout(() => {
+                                            buttonMessageDiv.classList.add('show');
+                                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                                            
+                                            // 创建单独的按钮容器
+                                            const buttonContainer = document.createElement('div');
+                                            buttonContainer.style.marginTop = '12px';
+                                            buttonContainer.innerHTML = previewButton;
+                                            chatContainer.appendChild(buttonContainer);
+                                            
+                                            // 在按钮显示后再恢复输入
+                                            disableInput(false);
+                                        }, 100);
+                                    });
+                                }, 100);
+                            });
+                        }
+                        
+                        setTimeout(() => {
+                            codeMessageDiv.classList.add('show');
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }, 100);
+                    }, 500);
+                });
+            } else {
+                if (isUser) {
+                    // 用户消息直接显示，保留换行符
+                    contentDiv.innerHTML = message.replace(/\n/g, '<br>');
+                } else {
+                    // AI消息使用打字效果，保留换行符
+                    typeText(contentDiv, message);
+                }
+            }
+            
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showTypingIndicator(text) {
+            const indicatorDiv = document.createElement('div');
+            indicatorDiv.className = 'message ai-message';
+            indicatorDiv.id = 'currentTypingIndicator';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'typing-indicator';
+            
+            // 只在"思考中"状态显示动画光点
+            if (text === '思考中') {
+                contentDiv.innerHTML = `<span>${text}</span><div class="typing-dots"></div>`;
+            } else {
+                contentDiv.innerHTML = `<span>${text}</span>`;
+            }
+            
+            indicatorDiv.appendChild(contentDiv);
+            chatContainer.appendChild(indicatorDiv);
+            
+            setTimeout(() => {
+                contentDiv.classList.add('show');
+                indicatorDiv.classList.add('show');
+            }, 100);
+            
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('currentTypingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        function disableInput(disabled) {
+            const sendButton = document.getElementById('sendButton');
+            const userInput = document.getElementById('userInput');
+            
+            sendButton.disabled = disabled;
+            userInput.disabled = disabled;
+            
+            if (disabled) {
+                sendButton.textContent = '回复中...';
+            } else {
+                sendButton.textContent = '发送';
+            }
+        }
+
+        function getAIResponse(userMessage) {
+            if (userMessage.includes('实验')) {
+                return aiResponses['实验'];
+            } else if (userMessage.includes('工具')) {
+                return aiResponses['工具'];
+            }
+            return '我收到了你的消息，正在处理中...';
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                // 确保移除所有现有的思考指示器
+                const existingIndicators = document.querySelectorAll('#currentTypingIndicator');
+                existingIndicators.forEach(indicator => indicator.remove());
+                
+                showMessage(message, true);
+                input.value = '';
+                
+                // 禁用输入
+                disableInput(true);
+                
+                // 显示"思考中"
+                showTypingIndicator('思考中');
+                
+                // 5秒后改为"思考完成"并开始回复
+                setTimeout(() => {
+                    hideTypingIndicator();
+                    showTypingIndicator('思考完成');
+                    
+                    // 缩短等待时间到300ms
+                    setTimeout(() => {
+                        const aiResponse = getAIResponse(message);
+                        showMessage(aiResponse);
+                        
+                        // 在所有动画完成后恢复输入
+                        if (message.includes('实验')) {
+                            // 不再在这里设置启用时间，而是在第二段文字显示完成后启用
+                        } else if (message.includes('工具')) {
+                            // 不再在这里设置启用时间，而是在代码和预览按钮显示完成后启用
+                        } else {
+                            // 仅等待打字效果完成
+                            setTimeout(() => {
+                                disableInput(false);
+                            }, 1500);
+                        }
+                    }, 300);
+                }, 5000);
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.image-container')) {
+                const img = e.target.closest('.image-container').querySelector('img');
+                modalImage.src = img.src;
+                modal.classList.add('show');
+            }
+        });
+
+        function closeModal() {
+            modal.classList.remove('show');
+        }
+
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html> 
