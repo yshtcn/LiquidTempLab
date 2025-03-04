@@ -108,8 +108,9 @@
             box-sizing: border-box;
             border: 1px solid #2F3336;
             white-space: pre-wrap;
-            max-height: 400px;
+            height: 70vh;
             overflow-y: auto;
+            display: block;
         }
         .code-block pre {
             margin: 0;
@@ -117,6 +118,8 @@
             white-space: pre-wrap;
             word-wrap: break-word;
             color: #E6E6E6;
+            min-height: 100%;
+            display: block;
         }
         .input-container {
             position: fixed;
@@ -186,17 +189,20 @@
         }
         .preview-button {
             display: inline-block;
-            margin-top: 12px;
-            padding: 8px 16px;
+            margin: 8px 0;
+            padding: 12px 24px;
             background-color: #4B7BF5;
             color: white;
             text-decoration: none;
             border-radius: 6px;
             font-size: 14px;
-            transition: background-color 0.2s ease;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         .preview-button:hover {
             background-color: #3B6BE5;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
         .typing-indicator {
             display: none;
@@ -403,12 +409,13 @@
 
         // 预设的AI回复内容
         const aiResponses = {            
-            '程序': `当然可以！我将为你编写一个使用HTML5和JavaScript制作的简单工具。我会在左边展示折线图，右边记录温度，请稍等：<div class="code-block"><pre id="codeContent"></pre></div><a href="LiquidTempLab.html" class="preview-button" target="_blank">点击查看效果</a>`,
-            '实验': `为了直观展示热水和冷牛奶的温度变化，我将使用折线图来呈现数据。以下是温度随时间变化的折线图：<div class="image-container"><img src="Show.png" alt="Show"></div>热水温度变化：从60℃开始，每分钟逐渐下降，最终在第7分钟降至44℃。\n冷牛奶温度变化：从10℃开始，每分钟逐渐上升，最终在第7分钟达到44℃。\n在第7分钟时，热水和冷牛奶的温度达到平衡，均为44℃。`
+            '实验': `为了直观展示热水和冷牛奶的温度变化，我将使用折线图来呈现数据。以下是温度随时间变化的折线图：<div class="image-container"><img src="Show.png" alt="Show"></div>热水温度变化：从60℃开始，每分钟逐渐下降，最终在第7分钟降至44℃。\n冷牛奶温度变化：从10℃开始，每分钟逐渐上升，最终在第7分钟达到44℃。\n在第7分钟时，热水和冷牛奶的温度达到平衡，均为44℃。`,
+            '程序': `当然可以！我将为你编写一个使用HTML5和JavaScript制作的简单程序。我会在左边展示折线图，右边记录温度，请稍等：<div class="code-block"><pre id="codeContent"></pre></div><a href="LiquidTempLab.html" class="preview-button" target="_blank">点击查看效果</a>`
         };
 
         // 源代码内容变量声明
         let liquidTempLabContent = '';
+        let sourceCodeLoaded = false;
 
         // 加载源代码的函数
         async function loadSourceCode() {
@@ -416,9 +423,11 @@
                 const response = await fetch('LiquidTempLab.html');
                 const text = await response.text();
                 liquidTempLabContent = text;
+                sourceCodeLoaded = true;
             } catch (error) {
                 console.error('加载源代码失败:', error);
                 liquidTempLabContent = '加载源代码失败，请稍后重试。';
+                sourceCodeLoaded = true;
             }
         }
 
@@ -457,6 +466,18 @@
             const batchSize = 8; // 每次显示8行
             const pauseTime = 300; // 暂停300毫秒
             
+            function scrollToBottom(element) {
+                requestAnimationFrame(() => {
+                    const codeBlock = element.closest('.code-block');
+                    if (codeBlock) {
+                        const scrollHeight = codeBlock.scrollHeight;
+                        const maxScroll = scrollHeight - codeBlock.clientHeight;
+                        codeBlock.scrollTop = maxScroll;
+                    }
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                });
+            }
+            
             function typeBatch() {
                 if (currentLine < lines.length) {
                     // 显示一批代码行
@@ -467,23 +488,23 @@
                     }
                     
                     // 滚动到底部
-                    const codeBlock = element.closest('.code-block');
-                    if (codeBlock) {
-                        codeBlock.scrollTop = codeBlock.scrollHeight;
-                    }
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    scrollToBottom(element);
                     
                     // 暂停一段时间后继续显示下一批
                     setTimeout(typeBatch, pauseTime);
                 } else if (callback) {
-                    callback();
+                    // 确保代码完全显示后再调用回调
+                    setTimeout(() => {
+                        scrollToBottom(element);
+                        callback();
+                    }, 500);
                 }
             }
             
             typeBatch();
         }
 
-        function showMessage(message, isUser = false) {
+        function showMessage(message, isUser = false, onComplete = null) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
             
@@ -526,6 +547,7 @@
                             typeText(analysisContentDiv, analysisText, () => {
                                 setTimeout(() => {
                                     disableInput(false);
+                                    if (onComplete) onComplete();
                                 }, 500);
                             });
                             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -547,37 +569,60 @@
                         chatContainer.appendChild(codeMessageDiv);
                         
                         const codeContent = codeMessageDiv.querySelector('#codeContent');
-                        if (codeContent && liquidTempLabContent) {
-                            typeCode(codeContent, liquidTempLabContent, () => {
-                                setTimeout(() => {
-                                    codeContent.parentElement.scrollLeft = 0;
-                                    
-                                    // 代码显示完成后显示提示文字和预览按钮
-                                    const buttonMessageDiv = document.createElement('div');
-                                    buttonMessageDiv.className = 'message ai-message';
-                                    const buttonContentDiv = document.createElement('div');
-                                    buttonContentDiv.className = 'message-content';
-                                    buttonMessageDiv.appendChild(buttonContentDiv);
-                                    chatContainer.appendChild(buttonMessageDiv);
-                                    
-                                    // 使用打字效果显示提示文字
-                                    typeText(buttonContentDiv, '点击下方按钮试试吧！', () => {
-                                        setTimeout(() => {
-                                            buttonMessageDiv.classList.add('show');
-                                            chatContainer.scrollTop = chatContainer.scrollHeight;
-                                            
-                                            // 创建单独的按钮容器
-                                            const buttonContainer = document.createElement('div');
-                                            buttonContainer.style.marginTop = '12px';
-                                            buttonContainer.innerHTML = previewButton;
-                                            chatContainer.appendChild(buttonContainer);
-                                            
-                                            // 在按钮显示后再恢复输入
-                                            disableInput(false);
-                                        }, 100);
+                        if (codeContent) {
+                            // 等待源代码加载完成
+                            const waitForSourceCode = () => {
+                                if (sourceCodeLoaded) {
+                                    typeCode(codeContent, liquidTempLabContent, () => {
+                                        // 代码显示完成后显示提示文字和预览按钮
+                                        const buttonMessageDiv = document.createElement('div');
+                                        buttonMessageDiv.className = 'message ai-message';
+                                        const buttonContentDiv = document.createElement('div');
+                                        buttonContentDiv.className = 'message-content';
+                                        buttonMessageDiv.appendChild(buttonContentDiv);
+                                        chatContainer.appendChild(buttonMessageDiv);
+                                        
+                                        // 使用打字效果显示提示文字
+                                        typeText(buttonContentDiv, '点击下方按钮试试吧！', () => {
+                                            setTimeout(() => {
+                                                buttonMessageDiv.classList.add('show');
+                                                chatContainer.scrollTop = chatContainer.scrollHeight;
+                                                
+                                                // 创建预览按钮容器
+                                                const buttonContainer = document.createElement('div');
+                                                buttonContainer.className = 'message ai-message';
+                                                buttonContainer.style.marginTop = '12px';
+                                                buttonContainer.style.marginBottom = '24px';
+                                                
+                                                const previewContentDiv = document.createElement('div');
+                                                previewContentDiv.className = 'message-content';
+                                                previewContentDiv.style.textAlign = 'center';
+                                                previewContentDiv.innerHTML = previewButton;
+                                                
+                                                buttonContainer.appendChild(previewContentDiv);
+                                                chatContainer.appendChild(buttonContainer);
+                                                
+                                                // 使用动画显示预览按钮
+                                                requestAnimationFrame(() => {
+                                                    buttonContainer.classList.add('show');
+                                                    // 确保滚动到最新位置
+                                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                                    
+                                                    setTimeout(() => {
+                                                        disableInput(false);
+                                                        if (onComplete) onComplete();
+                                                    }, 500);
+                                                });
+                                            }, 500);
+                                        });
                                     });
-                                }, 100);
-                            });
+                                } else {
+                                    // 如果源代码还没加载完成，等待100ms后重试
+                                    setTimeout(waitForSourceCode, 100);
+                                }
+                            };
+                            
+                            waitForSourceCode();
                         }
                         
                         setTimeout(() => {
@@ -590,9 +635,12 @@
                 if (isUser) {
                     // 用户消息直接显示，保留换行符
                     contentDiv.innerHTML = message.replace(/\n/g, '<br>');
+                    if (onComplete) onComplete();
                 } else {
                     // AI消息使用打字效果，保留换行符
-                    typeText(contentDiv, message);
+                    typeText(contentDiv, message, () => {
+                        if (onComplete) onComplete();
+                    });
                 }
             }
             
@@ -681,19 +729,9 @@
                     // 缩短等待时间到300ms
                     setTimeout(() => {
                         const aiResponse = getAIResponse(message);
-                        showMessage(aiResponse);
-                        
-                        // 在所有动画完成后恢复输入
-                        if (message.includes('实验')) {
-                            // 不再在这里设置启用时间，而是在第二段文字显示完成后启用
-                        } else if (message.includes('工具')) {
-                            // 不再在这里设置启用时间，而是在代码和预览按钮显示完成后启用
-                        } else {
-                            // 仅等待打字效果完成
-                            setTimeout(() => {
-                                disableInput(false);
-                            }, 1500);
-                        }
+                        showMessage(aiResponse, false, () => {
+                            disableInput(false);
+                        });
                     }, 300);
                 }, 5000);
             }
