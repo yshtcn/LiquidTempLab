@@ -22,8 +22,9 @@
 
 ### 安装
 
-1. 克隆或下载本项目到本地
-2. 直接在浏览器中打开 `LiquidTempLab.html` 文件即可使用
+1. 访问 [发布页面](https://git.ysht.me/yshtcn/LiquidTempLab/releases) 下载最新版本的源代码
+2. 解压下载的文件
+3. 直接在浏览器中打开 `LiquidTempLab.html` 文件即可使用
 
 ### 数据记录
 
@@ -56,8 +57,10 @@
 
 ## 作者
 
-[在此添加作者信息]
+K.Kang
 
 ## 许可证
 
-[在此添加许可证信息] 
+MIT License
+
+本项目采用 MIT 许可证，这意味着您可以自由地使用、修改和分发本项目，无论是用于商业还是非商业用途。详细信息请参见 [MIT License](https://opensource.org/licenses/MIT)。 
