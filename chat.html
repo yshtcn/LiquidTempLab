@@ -402,9 +402,9 @@
         const modalImage = document.getElementById('modalImage');
 
         // 预设的AI回复内容
-        const aiResponses = {
-            '实验': `为了直观展示热水和冷牛奶的温度变化，我将使用折线图来呈现数据。以下是温度随时间变化的折线图：<div class="image-container"><img src="Show.png" alt="Show"></div>热水温度变化：从60℃开始，每分钟逐渐下降，最终在第7分钟降至44℃。\n冷牛奶温度变化：从10℃开始，每分钟逐渐上升，最终在第7分钟达到44℃。\n在第7分钟时，热水和冷牛奶的温度达到平衡，均为44℃。`,
-            '工具': `当然可以！我将为你编写一个使用HTML5和JavaScript制作的简单工具。我会在左边展示折线图，右边记录温度，请稍等：<div class="code-block"><pre id="codeContent"></pre></div><a href="LiquidTempLab.html" class="preview-button" target="_blank">点击查看效果</a>`
+        const aiResponses = {            
+            '程序': `当然可以！我将为你编写一个使用HTML5和JavaScript制作的简单工具。我会在左边展示折线图，右边记录温度，请稍等：<div class="code-block"><pre id="codeContent"></pre></div><a href="LiquidTempLab.html" class="preview-button" target="_blank">点击查看效果</a>`,
+            '实验': `为了直观展示热水和冷牛奶的温度变化，我将使用折线图来呈现数据。以下是温度随时间变化的折线图：<div class="image-container"><img src="Show.png" alt="Show"></div>热水温度变化：从60℃开始，每分钟逐渐下降，最终在第7分钟降至44℃。\n冷牛奶温度变化：从10℃开始，每分钟逐渐上升，最终在第7分钟达到44℃。\n在第7分钟时，热水和冷牛奶的温度达到平衡，均为44℃。`
         };
 
         // 源代码内容变量声明
@@ -647,10 +647,10 @@
         }
 
         function getAIResponse(userMessage) {
-            if (userMessage.includes('实验')) {
+            if (userMessage.includes('程序')) {
+                return aiResponses['程序'];
+            } else if (userMessage.includes('实验')) {
                 return aiResponses['实验'];
-            } else if (userMessage.includes('工具')) {
-                return aiResponses['工具'];
             }
             return '我收到了你的消息，正在处理中...';
         }
