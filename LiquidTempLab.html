@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>热水和冷牛奶温度变化折线图</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .main-container {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+        .chart-section {
+            width: 66.67%;
+            height: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .controls-section {
+            width: 33.33%;
+            height: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            border-left: 1px solid #ddd;
+        }
+        .chart-container {
+            flex: 1;
+            width: 100%;
+            position: relative;
+            margin-bottom: 10px;
+        }
+        .title-container {
+            padding: 10px 0;
+        }
+        .axis-controls {
+            display: flex;
+            flex-direction: column;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+        }
+        .axis-controls.collapsed {
+            max-height: 0;
+            padding: 0;
+            margin: 0;
+        }
+        .toggle-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .toggle-button:hover {
+            background: #45a049;
+        }
+        .toggle-button .arrow {
+            transition: transform 0.3s ease;
+        }
+        .toggle-button.collapsed .arrow {
+            transform: rotate(-90deg);
+        }
+        .axis-control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        .axis-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            width: 100%;
+            text-align: left;
+        }
+        .axis-inputs {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+        input {
+            padding: 8px;
+            font-size: 14px;
+            width: 70px;
+            margin: 0 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .record-section {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .input-controls {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            width: 100%;
+        }
+        .input-group label {
+            flex: 1;
+            text-align: left;
+        }
+        .input-group input {
+            flex: 1;
+            max-width: 120px;
+        }
+        .buttons-container {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+        .record-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 40vh;
+            overflow-y: auto;
+            width: 100%;
+        }
+        .record-list li {
+            cursor: pointer;
+            padding: 8px 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            transition: background 0.2s;
+            text-align: left;
+            font-size: 14px;
+        }
+        .record-list li:hover {
+            background: #ddd;
+        }
+        button {
+            padding: 8px 15px;
+            font-size: 14px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            flex: 1;
+            margin: 0 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.clear {
+            background: #f44336;
+        }
+        button.clear:hover {
+            background: #d32f2f;
+        }
+        .error-message {
+            color: #f44336;
+            font-size: 14px;
+            margin: 5px 0;
+            min-height: 20px;
+        }
+        .section-title {
+            margin: 10px 0;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        
+        /* 响应式设计 - 纵向屏幕 */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                height: auto;
+                overflow: auto;
+            }
+            .chart-section {
+                width: 100%;
+                height: 60vh;
+                min-height: 300px;
+            }
+            .controls-section {
+                width: 100%;
+                height: auto;
+                border-left: none;
+                border-top: 1px solid #ddd;
+            }
+            .record-list {
+                max-height: 30vh;
+            }
+            .axis-inputs {
+                width: 100%;
+                justify-content: flex-start;
+            }
+            .axis-inputs span {
+                margin: 0 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="chart-section">
+            <div class="title-container">
+                <h1>热水和冷牛奶温度变化折线图</h1>
+            </div>
+            <div class="chart-container">
+                <canvas id="temperatureChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="controls-section">
+            <h2 class="section-title">坐标轴设置</h2>
+            <button class="toggle-button collapsed" onclick="toggleAxisControls()">
+                坐标轴设置
+                <span class="arrow">▼</span>
+            </button>
+            <div class="axis-controls collapsed" id="axisControls">
+                <div class="axis-control-group">
+                    <div class="axis-label">X轴范围 (分钟)</div>
+                    <div class="axis-inputs">
+                        <input type="number" id="xMin" placeholder="最小值" min="0" oninput="validateAxes()">
+                        <span>-</span>
+                        <input type="number" id="xMax" placeholder="最大值" min="0" oninput="validateAxes()">
+                    </div>
+                </div>
+                <div class="axis-control-group">
+                    <div class="axis-label">Y轴范围 (温度℃)</div>
+                    <div class="axis-inputs">
+                        <input type="number" id="yMin" placeholder="最小值" oninput="validateAxes()">
+                        <span>-</span>
+                        <input type="number" id="yMax" placeholder="最大值" oninput="validateAxes()">
+                    </div>
+                </div>
+            </div>
+            <div class="error-message" id="axisError"></div>
+            
+            <div class="record-section">
+                <h2 class="section-title">实验数据记录</h2>
+                <div class="input-controls">
+                    <div class="input-group">
+                        <label>时间（分钟）：</label>
+                        <input type="number" id="timeInput" value="0" min="0" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label>热水温度（℃）：</label>
+                        <input type="number" id="hotWaterInput" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label>冷牛奶温度（℃）：</label>
+                        <input type="number" id="coldMilkInput" step="0.1">
+                    </div>
+                </div>
+                
+                <div class="error-message" id="inputError"></div>
+                
+                <div class="buttons-container">
+                    <button onclick="addRecord()">添加数据</button>
+                    <button class="clear" onclick="clearRecords()">清空数据</button>
+                </div>
+                
+                <h3 class="section-title">已记录数据</h3>
+                <ul id="recordList" class="record-list"></ul>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const ctx = document.getElementById('temperatureChart').getContext('2d');
+        let chart;
+        let timeValues = [], hotWaterValues = [], coldMilkValues = [];
+        
+        // 验证坐标轴值
+        function validateAxes() {
+            const xMin = document.getElementById('xMin').value;
+            const xMax = document.getElementById('xMax').value;
+            const yMin = document.getElementById('yMin').value;
+            const yMax = document.getElementById('yMax').value;
+            const axisError = document.getElementById('axisError');
+            
+            axisError.textContent = '';
+            
+            if (xMin && xMax && Number(xMin) >= Number(xMax)) {
+                axisError.textContent = 'X轴最小值必须小于最大值';
+                return false;
+            }
+            
+            if (yMin && yMax && Number(yMin) >= Number(yMax)) {
+                axisError.textContent = 'Y轴最小值必须小于最大值';
+                return false;
+            }
+            
+            if (xMin && Number(xMin) < 0) {
+                axisError.textContent = 'X轴最小值不能小于0';
+                document.getElementById('xMin').value = 0;
+                return false;
+            }
+            
+            updateChart();
+            return true;
+        }
+
+        function addRecord() {
+            const timeInput = document.getElementById('timeInput');
+            const hotWaterInput = document.getElementById('hotWaterInput');
+            const coldMilkInput = document.getElementById('coldMilkInput');
+            const inputError = document.getElementById('inputError');
+
+            const time = Math.round(Number(timeInput.value)); // 确保时间为整数
+            const hotWater = Number(hotWaterInput.value);
+            const coldMilk = Number(coldMilkInput.value);
+
+            // 重置错误消息
+            inputError.textContent = '';
+            
+            // 验证输入
+            if (isNaN(time) || isNaN(hotWater) || isNaN(coldMilk)) {
+                inputError.textContent = '请输入有效的数字';
+                return;
+            }
+            
+            if (time < 0) {
+                inputError.textContent = '时间不能为负值';
+                return;
+            }
+            
+            // 添加数据
+            timeValues.push(time);
+            hotWaterValues.push(hotWater);
+            coldMilkValues.push(coldMilk);
+
+            // 自动排序
+            sortRecords();
+            
+            // 更新输入框的默认值
+            timeInput.value = time + 1; // 增加整数分钟
+            hotWaterInput.value = '';
+            coldMilkInput.value = '';
+            
+            updateChart();
+        }
+
+        function removeRecord(element) {
+            if (confirm('确定要删除这条记录吗？')) {
+                const index = parseInt(element.getAttribute('data-index'));
+                
+                if (index > -1) {
+                    timeValues.splice(index, 1);
+                    hotWaterValues.splice(index, 1);
+                    coldMilkValues.splice(index, 1);
+                }
+                
+                element.remove();
+                updateRecordIndices();
+                updateChart();
+            }
+        }
+        
+        function updateRecordIndices() {
+            const items = document.querySelectorAll('#recordList li');
+            items.forEach((item, index) => {
+                item.setAttribute('data-index', index);
+            });
+        }
+
+        function clearRecords() {
+            if (confirm('确定要清空所有数据吗？')) {
+                timeValues = [];
+                hotWaterValues = [];
+                coldMilkValues = [];
+                document.getElementById('recordList').innerHTML = '';
+                document.getElementById('timeInput').value = '0';
+                updateChart();
+            }
+        }
+        
+        function sortRecords() {
+            // 获取所有的排序索引
+            let sortedIndices = timeValues.map((_, i) => i).sort((a, b) => timeValues[a] - timeValues[b]);
+            
+            // 更新排序后的数据
+            let newTimes = sortedIndices.map(i => timeValues[i]);
+            let newHotWater = sortedIndices.map(i => hotWaterValues[i]);
+            let newColdMilk = sortedIndices.map(i => coldMilkValues[i]);
+            
+            // 替换原数组
+            timeValues = newTimes;
+            hotWaterValues = newHotWater;
+            coldMilkValues = newColdMilk;
+            
+            // 更新显示的列表
+            const recordList = document.getElementById('recordList');
+            recordList.innerHTML = '';
+            
+            for (let i = 0; i < timeValues.length; i++) {
+                const listItem = document.createElement('li');
+                listItem.textContent = `时间: ${timeValues[i]}分钟, 热水: ${hotWaterValues[i].toFixed(1)}℃, 牛奶: ${coldMilkValues[i].toFixed(1)}℃`;
+                listItem.setAttribute('data-time', timeValues[i]);
+                listItem.setAttribute('data-hot', hotWaterValues[i]);
+                listItem.setAttribute('data-cold', coldMilkValues[i]);
+                listItem.setAttribute('data-index', i);
+                listItem.onclick = function() { removeRecord(this); };
+                recordList.appendChild(listItem);
+            }
+        }
+
+        function updateChart() {
+            let xMin = document.getElementById('xMin').value;
+            let xMax = document.getElementById('xMax').value;
+            let yMin = document.getElementById('yMin').value;
+            let yMax = document.getElementById('yMax').value;
+            
+            // 设置默认值和动态范围
+            xMin = xMin ? Number(xMin) : 0; // 时间最小值始终为0或更大
+            xMax = xMax ? Number(xMax) : (timeValues.length ? Math.max(...timeValues) + 1 : 10);
+            
+            let allTemps = [...hotWaterValues, ...coldMilkValues].filter(t => !isNaN(t));
+            let tempMin = allTemps.length ? Math.min(...allTemps) : 0;
+            let tempMax = allTemps.length ? Math.max(...allTemps) : 50;
+            
+            // 为了更好的视觉效果，给温度范围添加一些余量
+            tempMin = Math.floor(tempMin - 5);
+            tempMax = Math.ceil(tempMax + 5);
+            
+            yMin = yMin ? Number(yMin) : tempMin;
+            yMax = yMax ? Number(yMax) : tempMax;
+
+            const data = {
+                labels: timeValues,
+                datasets: [
+                    {
+                        label: '热水温度（℃）',
+                        data: timeValues.map((time, i) => ({x: time, y: hotWaterValues[i]})),
+                        borderColor: 'red',
+                        backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: '冷牛奶温度（℃）',
+                        data: timeValues.map((time, i) => ({x: time, y: coldMilkValues[i]})),
+                        borderColor: 'blue',
+                        backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }
+                ]
+            };
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '热水和冷牛奶温度随时间变化',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                boxWidth: 40,
+                                padding: 10
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { 
+                                display: true, 
+                                text: '时间（分钟）',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            min: xMin,
+                            max: xMax,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: { 
+                                display: true, 
+                                text: '温度（℃）',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            min: yMin,
+                            max: yMax
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    },
+                    animation: {
+                        duration: 500
+                    }
+                }
+            });
+        }
+
+        // 页面加载完成后初始化图表
+        document.addEventListener('DOMContentLoaded', function() {
+            updateChart();
+        });
+        
+        // 屏幕大小变化时重新调整图表
+        window.addEventListener('resize', function() {
+            updateChart();
+        });
+
+        // 控制坐标轴设置区域的显示/隐藏
+        function toggleAxisControls() {
+            const controls = document.getElementById('axisControls');
+            const button = document.querySelector('.toggle-button');
+            controls.classList.toggle('collapsed');
+            button.classList.toggle('collapsed');
+        }
+    </script>
+</body>
+</html>
