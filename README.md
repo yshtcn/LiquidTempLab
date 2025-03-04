@@ -22,7 +22,7 @@
 
 ### 安装
 
-1. 直接从项目中下载`LiquidTempLab.html`或者访问 [发布页面](/releases) 下载最新版本的“源代码”压缩包。
+1. 直接从项目中下载`LiquidTempLab.html`或者访问发布页面下载最新版本的“源代码”压缩包。
 2. 解压下载的文件
 3. 直接在浏览器中打开 `LiquidTempLab.html` 文件即可使用
 
